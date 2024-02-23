@@ -1,0 +1,16 @@
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String
+  date        DateTime
+  category    String
+  senderId    String   @unique
+  receiverId  String   @unique
+  sender      Wallet   @relation("send", fields: [senderId], references: [id])
+  receiver    Wallet   @relation("receive", fields: [receiverId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("transactions")
+}

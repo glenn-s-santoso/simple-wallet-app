@@ -1,0 +1,13 @@
+
+model Wallet {
+  id        String        @id @default(uuid())
+  balance   Float
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id])
+  receives  Transaction[] @relation("send")
+  sends     Transaction[] @relation("receive")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("wallets")
+}

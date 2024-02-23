@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+// model Post {
+//     id        Int      @id @default(autoincrement())
+//     title     String
+//     content   String?
+//     published Boolean? @default(false)
+//     author    User?    @relation(fields: [authorId], references: [id])
+//     authorId  Int?
+
+//     @@map("posts")
+// }
+
+model Transaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String
+  date        DateTime
+  category    String
+  senderId    String   @unique
+  receiverId  String   @unique
+  sender      Wallet   @relation("sender", fields: [senderId], references: [id])
+  receiver    Wallet   @relation("receiver", fields: [receiverId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+model User {
+  id       String  @id @default(uuid())
+  email    String  @unique
+  name     String?
+  password String
+  phone    String? @unique
+  walletId String
+  wallet   Wallet?
+  // wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  @@map("users")
+}
+
+model Wallet {
+  id        String        @id @default(uuid())
+  balance   Float
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id])
+  receives  Transaction[] @relation("sender")
+  sends     Transaction[] @relation("receiver")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("wallets")
+}
