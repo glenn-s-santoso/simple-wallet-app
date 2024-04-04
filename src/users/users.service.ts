@@ -2,23 +2,27 @@
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto'; */
 
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { HttpStatus, Injectable, HttpException } from '@nestjs/common';
+import { PrismaService } from '@prismaSvc/prisma.service';
 import { User, Prisma } from '@prisma/client';
+
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
-
-  async user(
-    userWhereUniqueInput: Prisma.UserWhereUniqueInput,
-  ): Promise<User | null> {
-    return this.prisma.user.findUnique({
-      where: userWhereUniqueInput,
-    });
+  private user: Prisma.UserDelegate;
+  constructor(private prisma: PrismaService) {
+    this.user = prisma.user;
   }
 
-  async users(params: {
+  async findOne(
+    userWhereUniqueInput: Prisma.UserWhereUniqueInput,
+  ): Promise<User | null> {
+    const usr = await this.checkIfNotFound(userWhereUniqueInput);
+    return usr;
+  }
+
+  async findAll(params: {
     skip?: number;
     take?: number;
     cursor?: Prisma.UserWhereUniqueInput;
@@ -26,7 +30,7 @@ export class UsersService {
     orderBy?: Prisma.UserOrderByWithRelationInput;
   }): Promise<User[]> {
     const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.user.findMany({
+    return this.user.findMany({
       skip,
       take,
       cursor,
@@ -35,27 +39,67 @@ export class UsersService {
     });
   }
 
-  async createUser(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prisma.user.create({
-      data,
-    });
+  async create(data: Prisma.UserCreateInput): Promise<User> {
+    data.password = await bcrypt.hash(data.password, await bcrypt.genSalt());
+    return this.user
+      .create({
+        data,
+      })
+      .catch((e) => {
+        const str = e.meta.target[0];
+        if (str == 'email' || str == 'username' || str == 'phone') {
+          
+          throw new HttpException(
+            str[0].toUpperCase() +
+            str.slice(1) +
+              ' already exists!',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        return e;
+      });
   }
 
-  async updateUser(params: {
+  async update(params: {
     where: Prisma.UserWhereUniqueInput;
     data: Prisma.UserUpdateInput;
   }): Promise<User> {
     const { where, data } = params;
-    return this.prisma.user.update({
+
+    await this.checkIfNotFound(where);
+    
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, await bcrypt.genSalt());
+    }
+    
+    return this.user.update({
       data,
       where,
     });
   }
 
-  async deleteUser(where: Prisma.UserWhereUniqueInput): Promise<User> {
-    return this.prisma.user.delete({
+  async remove(where: Prisma.UserWhereUniqueInput): Promise<User> {
+    await this.checkIfNotFound(where);
+
+    return this.user.delete({
       where,
     });
+  }
+
+  async checkIfNotFound(userWhereUniqueInput) {
+    console.log(userWhereUniqueInput);
+    const usr = await this.user.findUnique({
+      where: userWhereUniqueInput,
+    });
+
+    if (usr == undefined) {
+      throw new HttpException(
+        'User not found!',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return usr;
   }
   /* create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';

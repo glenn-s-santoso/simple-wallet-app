@@ -5,7 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -26,7 +27,7 @@ datasource db {
 // }
 
 model Transaction {
-  id          String   @id @default(uuid())
+  id          String   @id @unique @default(uuid())
   amount      Float
   description String
   date        DateTime
@@ -42,20 +43,22 @@ model Transaction {
 }
 
 model User {
-  id       String  @id @default(uuid())
-  email    String  @unique
-  name     String?
-  password String
-  phone    String? @unique
-  walletId String
-  wallet   Wallet?
-  // wallet   Wallet @relation(fields: [walletId], references: [id])
+  id        String   @id @unique @default(uuid())
+  email     String   @unique
+  name      String?
+  username  String   @unique
+  password  String
+  phone     String?  @unique
+  walletId  String?  @unique
+  wallet    Wallet?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
 model Wallet {
-  id        String        @id @default(uuid())
+  id        String        @id @unique @default(uuid())
   balance   Float
   userId    String        @unique
   user      User          @relation(fields: [userId], references: [id])
